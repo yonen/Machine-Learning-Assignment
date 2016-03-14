@@ -1,0 +1,104 @@
+---
+title: "Prediction Assignment"
+author: "Jessy Ouellette"
+date: "March 13, 2016"
+output: html_document
+---
+
+#Overview
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+
+The goal is to predict the manner in which they did the exercise.
+
+
+##Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+# Data Processing
+```{R echo = FALSE, warning = FALSE}
+library(caret, quietly = TRUE)
+
+set.seed(5555)
+```
+
+## Getting and loading the data
+```{R Loading Data, cache = TRUE}
+if (!file.exists("data/pml-training.csv")) {
+	download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
+				  "data/pml-training.csv", method = "curl")
+}
+
+training <- read.csv("data/pml-training.csv", na.strings = c('NA', '', '#DIV/0!'))
+
+if (!file.exists("data/pml-testing.csv")) {
+	download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",
+				  "data/pml-testing.csv", method = "curl")
+}
+
+testing <- read.csv("data/pml-testing.csv", na.strings = c('NA', '', '#DIV/0!'))
+```
+
+## Cleaning the data
+The data contains quite a few extraneous variables that can be removed. We can remove the first 6 variables since they do not help with the prediction. All near zero variables and variables that mostly contain NA's are also removed.
+```{R Cleaning data, cache = TRUE}
+# removing the first 6 variables as they do not help with the prediction
+training <- training[, -1:-6]
+testing <- testing[, -1:-6]
+
+# removing near zero variables
+nzv <- nearZeroVar(training)
+training <- training[, -nzv]
+testing <- testing[, -nzv]
+
+# removing variables with 98% or more NA values
+isNA <- sapply(training, function(x) mean(is.na(x)) > 0.97)
+training <- training[, !isNA]
+testing <- testing[, !isNA]
+```
+
+To estimate the out-of-sample error, the data is split into a training and a validation dataset so we can test our model before using it on the test data.
+```{R}
+
+inTrain <- createDataPartition(training$classe, p=0.6, list=FALSE)
+train1 <- training[inTrain, ]
+valid1 <- training[-inTrain, ]
+```
+
+```{r echo=FALSE}
+library(parallel, quietly = TRUE)
+library(doParallel, quietly = TRUE)
+
+cluster <- makeCluster(detectCores() - 1) # leaving 1 core for OS
+registerDoParallel(cluster)
+```
+
+# Building the Model
+The first model built is a random forest model. To improve performance we a 4 fold cross validation running in parallel.
+
+```{R Training model, cache = TRUE}
+fitControl <- trainControl(method="cv", number=4, allowParallel = TRUE, verboseIter = FALSE)
+mod <- train(classe ~.,  preProcess=c("center", "scale"), data=train1, method="rf", fitControl = fitControl)
+
+pred <- predict(mod, valid1)
+
+confusionMatrix(valid1$classe, pred)
+```
+
+The accuracy is 99.68%; therefore, the model is quite accurate and can be used to predict the test data set.
+
+## Retraining model with all of the training data set
+```{R Retraining model, cache = TRUE}
+mod <- train(classe ~.,  preProcess=c("center", "scale"), data=training, method="rf", fitControl = fitControl)
+
+pred <- predict(mod, testing)
+```
+
+# Test data prediction:
+```{R}
+data.frame(Prediction = pred)
+```
+
+```{R echo = FALSE}
+stopCluster(cluster)
+```
+
