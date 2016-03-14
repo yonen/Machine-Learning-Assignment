@@ -205,7 +205,10 @@ confusionMatrix(valid1$classe, pred)</code></pre>
 ## Detection Rate         0.2845   0.1926   0.1737   0.1631   0.1829
 ## Detection Prevalence   0.2845   0.1935   0.1744   0.1639   0.1838
 ## Balanced Accuracy      0.9993   0.9978   0.9960   0.9968   0.9995</code></pre>
+
 <p>The accuracy is 99.68% which means the out-of-sample error is 0.32%; therefore, the model is quite accurate and can be used to predict the test data set.</p>
+
+
 <div id="retraining-model-with-all-of-the-training-data-set" class="section level2">
 <h2>Retraining model with all of the training data set</h2>
 <pre class="r"><code>mod &lt;- train(classe ~.,  preProcess=c(&quot;center&quot;, &quot;scale&quot;), data=training, method=&quot;rf&quot;, fitControl = fitControl)
