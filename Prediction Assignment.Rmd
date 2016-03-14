@@ -84,7 +84,7 @@ pred <- predict(mod, valid1)
 confusionMatrix(valid1$classe, pred)
 ```
 
-The accuracy is 99.68%; therefore, the model is quite accurate and can be used to predict the test data set.
+The accuracy is 99.68% which means the out-of-sample error is 0.32%; therefore, the model is quite accurate and can be used to predict the test data set.
 
 ## Retraining model with all of the training data set
 ```{R Retraining model, cache = TRUE}
